@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-prob
+  labels:
+    sanath: achari
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      sanath: achari
+  template:
+    metadata:
+      labels:
+        sanath: achari
+    spec:
+      containers:
+        - name: nginx-cont
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGET:
+              path: /index.html
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGET:
+              path: /index.html
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: cluster-pod
+    labels:
+      sanath: achar
+spec:
+  containers:
+    - name: cluster-pod
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+  ---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: cluster-service
+spec:
+  type: ClusterIP
+    selector:
+      sanath: achar
+    ports:
+      targetPort: 80

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-no-vol-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx-no-vol-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-no-vol-service
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+    - port: 80       # corrected (was 'ports')
+      targetPort: 80
+      nodePort: 30001
+#Demo 1
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-sc    #Name of the storage class. This is used in PVCs
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+parameters:
+  type: gp3
+
+  #Demo 1
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-pvc #Name of the PVC (Referenced by Pods to mount storage)
+spec:
+  accessModes: #volume can be mounted as read-write by a single node
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi  #requesting 5Gi of storage
+  storageClassName: ebs-sc
+
+#Demo1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ebs-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-ebs
+  template:
+    metadata:
+      labels:
+        app: nginx-ebs
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx
+          volumeMounts:   #mounts a volume inside the pod
+            - name: ebs-storage
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: ebs-storage
+          persistentVolumeClaim:
+            claimName: ebs-pvc
+
+            #Demo1
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ebs-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-ebs
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

@@ -1,0 +1,77 @@
+#YML File for Creating Single Container POD
+apiVersion: v1 #this is pod version
+kind: Pod #we want to create a pod
+metadata: #contains pod information
+  name: single-container-pod  #name of the pod
+spec: #information about pod creation process i.e image name, container name, port number
+  containers:
+    - name: nginx-sc-container
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+#YML File for Creating Multi Container POD or Side Car Container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-simple
+spec:
+  containers:
+    - name: app
+      image: busybox
+      command: ["sh", "-c"]
+      args: ["while true; do echo 'Hello from App Container'>> /var/log/app.log; sleep 2; done"]
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log
+
+    - name: sidecar
+      image: busybox
+      command: ["sh", "-c"]
+      args: ["tail -f /var/log/app.log"]
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log
+
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
+
+      #YML File for Creating Multi Container POD or Side Car Container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-sidecar
+spec:
+  containers:
+    - name: nginx
+      image: nginx:alpine
+      ports:
+        - containerPort: 80
+      
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+    - name: log-tailer
+      image: busybox
+      command: ["sh", "-c"]
+      args: ["tail -f /var/log/nginx/access.log"]
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+#Init Container - Demo 1
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: init-demo
+spec:
+  initContainers:
+    - name: wait-init
+      image: busybox
+      command: ['sh', '-c', 'echo "Init Started"; sleep 10; echo "Init done"']
+  containers:
+    - name: nginx
+      image: nginx:alpine
+      ports:
+        - containerPort: 80

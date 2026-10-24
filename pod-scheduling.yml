@@ -1,0 +1,224 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-nodeselector-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-ns
+  template:
+    metadata:
+      labels:
+        app: nginx-ns
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx-stable #observe the behaviour and then change to nginx:stable
+      nodeSelector:
+        env: dev
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-nodeaffinity-required
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-na-hard  # selector to identify the pods managed by the deployment
+  template:
+    metadata:
+      labels:
+        app: nginx-na-hard  # pod label
+    spec:
+      affinity:   # ✅ must be inside spec, same level as containers
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: env
+                    operator: In
+                    values:
+                      - dev
+      containers:
+        - name: nginx-container
+          image: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-na-preferred
+spec:
+  replicas: 2
+  selector: 
+    matchLabels:
+      app: nginx-na-soft
+  template:
+    metadata:
+      labels:
+        app: nginx-na-soft
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:   # ✅ corrected spelling
+                matchExpressions:
+                  - key: env
+                    operator: In   # ✅ required
+                    values:
+                      - test
+      containers:
+        - name: nginx-pref-container
+          image: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend #deployment select pods with lable "app=frontend"
+  template:
+    metadata:
+      labels:
+        app: frontend #each pod created will have label as "app=frontend"
+    spec:
+      containers:
+        - name: frontend
+          image: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-podaffinity
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - frontend
+                topologyKey: kubernetes.io/hostname  # ✅ must be inside podAffinityTerm
+      containers:
+        - name: backend
+          image: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swiggy-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swiggy-backend
+  template:
+    metadata:
+      labels:
+        app: swiggy-backend        # Label = "app=swiggy-backend"
+    spec:
+      containers:
+      - name: swiggy-backend
+        image: kastrov/swiggy      # Your custom Swiggy image
+        ports:
+        - containerPort: 3000      # Exposing port 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swiggy-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swiggy-frontend
+  template:
+    metadata:
+      labels:
+        app: swiggy-frontend       # Label = "app=swiggy-frontend"
+    spec:
+      containers:
+      - name: swiggy-frontend
+        image: kastrov/swiggy
+        ports:
+        - containerPort: 3000
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 90
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - swiggy-backend   # Stick close to backend Pods
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zomato-db
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zomato-db
+  template:
+    metadata:
+      labels:
+        app: zomato-db              # Label = "app=zomato-db"
+    spec:
+      containers:
+      - name: zomato-db
+        image: kastrov/zomato
+        ports:
+        - containerPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swiggy-db
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swiggy-db
+  template:
+    metadata:
+      labels:
+        app: swiggy-db              # Label = "app=swiggy-db"
+    spec:
+      containers:
+      - name: swiggy-db
+        image: kastrov/swiggy
+        ports:
+        - containerPort: 3000
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - zomato-db         # Avoid nodes with Zomato DB Pods
+            topologyKey: kubernetes.io/hostname

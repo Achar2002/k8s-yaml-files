@@ -1,0 +1,72 @@
+#resource quote yml file
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: dev
+spec:
+  hard:
+    pods: "5"
+    limits.cpu: "1"
+    limits.memory: 1Gi
+
+#deployment yml file based on about resource quota
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zomato-deployment
+  labels:
+    app: zomato
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zomato
+  template:
+    metadata:
+      labels:
+        app: zomato
+    spec:
+      containers:
+        - name: zomato-container
+          image: kastrov/zomato
+          resources:
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+        - name: php-apache
+          image: registry.k8s.io/hpa-example
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "200m"
+            limits:
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-service
+  labels:
+    run: php-apache
+spec:
+  ports:
+    - port: 80
+  selector:
+    run: php-apache

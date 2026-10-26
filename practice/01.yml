@@ -1,0 +1,87 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+  namespace: devops
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      sanath: achari
+  template:
+    metadata:
+      labels:
+        sanath: achari
+    spec:
+    
+      nodeSelector:
+        virat: kohli
+
+
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: virat
+                    operator: In
+                    values:
+                      - kohli
+
+
+
+      affinity:
+        nodeAffinity:
+          prefferedDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: virat
+                    operator: In
+                    values:
+                      - kohli
+
+      affinity:
+        podAffinity:
+          prefferedDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - frontend
+                topologykey: kubernetes.io/hostname      
+                      
+
+
+      containers:
+        - name: demo-cont
+          image: kastrov/swiggy
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "200Mi"
+            limits:
+              cpu: "500m"
+              memory: "500Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-service
+  namespace: devops
+spec:
+  type: NodePort
+  selector:
+    sanath: achari
+  ports:
+    - port: 80
+      targetPort: 3000
+      nodePort: 30080
+
